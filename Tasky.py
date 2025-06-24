@@ -1,3 +1,4 @@
+
 import json
 import asyncio
 from pathlib import Path
@@ -94,7 +95,7 @@ class AddTaskModal(ModalScreen):
                 }
                 self.dismiss(task_data)
             else:
-                pass
+                self.query_one("#title-input").focus()
         elif event.button.id == "cancel-button":
             self.dismiss(None)
 
@@ -223,7 +224,6 @@ class TaskManagerApp(App):
         Binding("q", "quit", "Quit"),
     ]
     
-    # Reactive state
     tasks: reactive[List[Task]] = reactive([])
     current_task: reactive[Optional[Task]] = reactive(None)
     search_filter: reactive[str] = reactive("")
@@ -242,10 +242,8 @@ class TaskManagerApp(App):
                        id="search-input")
         
         with Horizontal(id="main-container"):
-            # Task table on the left
             yield DataTable(id="task-table", cursor_type="row", zebra_stripes=True)
             
-            # Detail panel on the right
             with Vertical(id="detail-panel"):
                 yield Static("[bold blue]Task Details[/bold blue]", id="detail-title")
                 yield Static("Select a task to view details", id="detail-content")
@@ -272,6 +270,7 @@ class TaskManagerApp(App):
                         self.task_counter = max(int(task.id) for task in self.tasks) + 1
             except (json.JSONDecodeError, KeyError, ValueError):
                 self.tasks = []
+                self.task_counter = 0
     
     def save_tasks(self) -> None:
         try:
@@ -307,19 +306,17 @@ class TaskManagerApp(App):
                 key=task.id
             )
         
-        if filtered_tasks and not table.cursor_coordinate:
-            table.move_cursor(row=0)
+        if filtered_tasks and table.row_count > 0:
+            if not hasattr(table, 'cursor_row') or table.cursor_row >= table.row_count:
+                table.move_cursor(row=0)
             self.update_current_task()
     
     def update_current_task(self) -> None:
         table = self.query_one("#task-table", DataTable)
-        if table.cursor_coordinate:
-            row_key = table.get_row_at(table.cursor_coordinate.row)[0]  
-            filtered_tasks = self.get_filtered_tasks()
-            if 0 <= table.cursor_coordinate.row < len(filtered_tasks):
-                self.current_task = filtered_tasks[table.cursor_coordinate.row]
-            else:
-                self.current_task = None
+        filtered_tasks = self.get_filtered_tasks()
+        
+        if table.cursor_row is not None and 0 <= table.cursor_row < len(filtered_tasks):
+            self.current_task = filtered_tasks[table.cursor_row]
         else:
             self.current_task = None
         
@@ -354,30 +351,36 @@ class TaskManagerApp(App):
             self.search_filter = event.value
             self.refresh_table()
     
-    async def action_add_task(self) -> None:
-        result = await self.push_screen_wait(AddTaskModal())
-        if result:
-            new_task = Task(
-                id=str(self.task_counter),
-                title=result["title"],
-                priority=result["priority"],
-                tags=result["tags"]
-            )
-            self.task_counter += 1
-            self.tasks.append(new_task)
-            self.save_tasks()
-            self.refresh_table()
+    def action_add_task(self) -> None:
+        def handle_add_result(result):
+            if result:
+                new_task = Task(
+                    id=str(self.task_counter),
+                    title=result["title"],
+                    priority=result["priority"],
+                    tags=result["tags"]
+                )
+                self.task_counter += 1
+                self.tasks.append(new_task)
+                self.save_tasks()
+                self.refresh_table()
+        
+        self.push_screen(AddTaskModal(), handle_add_result)
     
     def action_complete_task(self) -> None:
         if self.current_task:
-            self.current_task.completed = not self.current_task.completed
+            for task in self.tasks:
+                if task.id == self.current_task.id:
+                    task.completed = not task.completed
+                    break
             self.save_tasks()
             self.refresh_table()
-            self.update_detail_panel()
+            self.update_current_task()  
     
     def action_delete_task(self) -> None:
         if self.current_task:
             self.tasks = [task for task in self.tasks if task.id != self.current_task.id]
+            self.current_task = None
             self.save_tasks()
             self.refresh_table()
     
@@ -403,9 +406,9 @@ class TaskManagerApp(App):
         self.search_filter = ""
         self.refresh_table()
     
-    async def action_show_details(self) -> None:
+    def action_show_details(self) -> None:
         if self.current_task:
-            await self.push_screen_wait(TaskDetailModal(self.current_task))
+            self.push_screen(TaskDetailModal(self.current_task))
 
 
 def main():
