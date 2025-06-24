@@ -1,0 +1,42 @@
+[
+  {
+    "id": "1",
+    "title": "Complete the project documentation",
+    "completed": false,
+    "priority": "high",
+    "tags": ["work", "documentation"],
+    "created_at": "2025-06-22T10:30:00"
+  },
+  {
+    "id": "2",
+    "title": "Review pull requests",
+    "completed": true,
+    "priority": "normal",
+    "tags": ["work", "code-review"],
+    "created_at": "2025-06-22T09:15:00"
+  },
+  {
+    "id": "3",
+    "title": "Buy groceries for the week",
+    "completed": false,
+    "priority": "normal",
+    "tags": ["personal", "shopping"],
+    "created_at": "2025-06-22T08:45:00"
+  },
+  {
+    "id": "4",
+    "title": "Plan vacation itinerary",
+    "completed": false,
+    "priority": "low",
+    "tags": ["personal", "travel"],
+    "created_at": "2025-06-21T16:20:00"
+  },
+  {
+    "id": "5",
+    "title": "Fix bug in authentication module",
+    "completed": false,
+    "priority": "high",
+    "tags": ["work", "bug", "urgent"],
+    "created_at": "2025-06-22T11:00:00"
+  }
+]
